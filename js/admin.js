@@ -1,4 +1,4 @@
-import {mountBank} from './questions.js?v=4.11';
+import {mountBank} from './questions.js?v=4.12';
 import {load,save,channel,defaults,validate,freshTimer,remaining,seconds} from './store.js?v=4.3';
 const $=id=>document.getElementById(id);let s,busy=false;
 const status=m=>$('status').textContent=m;
@@ -29,11 +29,9 @@ function renderScoring(){
  const active=s.screen==='round'&&s.round!==3;
  $('awardPanel').hidden=!active;$('roundComplete').hidden=!active||s.round!==1;$('roundComplete').disabled=s.completedRounds.includes(1);
  $('awardContext').textContent=`${s.teams[s.team]} · Round ${s.round}`;
- const reveal=$('qReveal');
  $('awardButtons').replaceChildren();
- $('awardButtons').style.gridTemplateColumns=`repeat(${s.round===4?4:3},minmax(0,1fr))`;
- if(active){const keys=s.round===4?['correct','incorrect','skipped']:[s.mode==='passed'?'passed':'direct','incorrect'];for(const k of keys){const value=s.scoring[s.round][k];const b=node('button',`${labels[k]} (${value>0?'+':''}${value})`);b.dataset.outcome=k;b.disabled=!s.activeQuestion||s.questionHidden||s.answerUnlocked===true;b.onclick=()=>change(x=>{if(x.completedRounds.includes(x.round)||x.screen!=='round'||!x.activeQuestion||x.questionHidden||x.answerUnlocked)return;record(x,x.team,x.round,x.scoring[x.round][k],labels[k]);if(x.round!==4){if(k==='incorrect')nextPass(x);else nextDirect(x);}else{x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;}});$('awardButtons').append(b);if(k==='incorrect')$('awardButtons').append(reveal);}}
- if(!active)$('awardButtons').append(reveal);
+ $('awardButtons').style.gridTemplateColumns=`repeat(${s.round===4?3:2},minmax(0,1fr))`;
+ if(active){const keys=s.round===4?['correct','incorrect','skipped']:[s.mode==='passed'?'passed':'direct','incorrect'];for(const k of keys){const value=s.scoring[s.round][k];const b=node('button',`${labels[k]} (${value>0?'+':''}${value})`);b.dataset.outcome=k;b.disabled=!s.activeQuestion||s.questionHidden||s.answerUnlocked===true;b.onclick=()=>change(x=>{if(x.completedRounds.includes(x.round)||x.screen!=='round'||!x.activeQuestion||x.questionHidden||x.answerUnlocked)return;record(x,x.team,x.round,x.scoring[x.round][k],labels[k]);if(x.round!==4){if(k==='incorrect')nextPass(x);else nextDirect(x);}else{x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;}});$('awardButtons').append(b);}}
  const form=$('scoringForm');const openPoints=new Set([...form.querySelectorAll('details[open]')].map(d=>d.dataset.round));form.replaceChildren();for(const r of [1,2,3,4]){const card=node('details','');card.className='round-points';card.dataset.round=String(r);card.open=openPoints.has(String(r));card.append(node('summary',`Round ${r}`));if(r===3){card.append(node('p','Scoring rules pending.'));}else{for(const k of Object.keys(defaults().scoring[r])){const l=node('label',labels[k]);const input=node('input','');input.type='number';input.min=-10000;input.max=10000;input.step=1;input.required=true;input.value=s.scoring[r][k];input.dataset.round=r;input.dataset.key=k;l.append(input);card.append(l);}}form.append(card);}
  renderQuizControls();
  $('scoreHistory').replaceChildren(...s.history.slice(-10).reverse().map(h=>node('p',`${s.teams[h.team]} · R${h.round} · ${h.label}: ${h.delta>0?'+':''}${h.delta}`)));
