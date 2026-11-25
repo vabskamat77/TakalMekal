@@ -1,4 +1,4 @@
-import {quiz} from './config.js';import {load,channel,seconds,validate} from './store.js?v=3.4';
+import {quiz} from './config.js';import {load,channel,seconds,validate} from './store.js?v=3.5';
 const $=id=>document.getElementById(id),menu=$('menu'),view=$('view'),home=$('home');let s,local=null,revision=0;const projector=new URLSearchParams(location.search).has('projector');
 function el(tag,text,cls){const e=document.createElement(tag);e.textContent=text;if(cls)e.className=cls;return e;}
 function renderHomeScores(){const cards=$('live-scores');cards.replaceChildren();s.teams.forEach((name,i)=>{const card=el('article','','score-card');card.append(el('h3',name),el('strong',s.scores[i].reduce((a,b)=>a+b,0),'score-total'),el('span','POINTS'));cards.append(card);});}
