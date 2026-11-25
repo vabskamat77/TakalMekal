@@ -1,4 +1,4 @@
-import {mountBank} from './questions.js?v=4.12';
+import {mountBank} from './questions.js?v=4.17';
 import {load,save,channel,defaults,validate,freshTimer,remaining,seconds} from './store.js?v=4.3';
 const $=id=>document.getElementById(id);let s,busy=false;
 const status=m=>$('status').textContent=m;
