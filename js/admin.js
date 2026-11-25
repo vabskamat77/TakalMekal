@@ -18,6 +18,7 @@ $('pass').onclick=()=>change(x=>{if(x.screen!=='round'||![1,2].includes(x.round)
 $('start').onclick=()=>change(x=>{if(x.round===3||x.screen!=='round')return;if(x.timer.end!==null){stop(x);}else if(x.timer.remaining>0){x.timer.end=Date.now()+x.timer.remaining;}});
 $('export').onclick=()=>{const x=structuredClone(s);stop(x);const url=URL.createObjectURL(new Blob([JSON.stringify(x,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='takal-mekal-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('import').onchange=async()=>{try{const f=$('import').files[0];if(!f)return;const x=validate(JSON.parse(await f.text()));x.timer.end=null;if(confirm('Replace current local quiz data?'))await change(y=>Object.assign(y,x));}catch(e){status('Import failed: '+e.message);}finally{$('import').value='';}};
+$('resetQuiz').onclick=async()=>{saveMessage('resetQuiz');if(!confirm('Reset the quiz? All scores, round statuses and score history will be cleared. Team names and scoring rules will be retained. Export a backup first.'))return;const ok=await change(x=>{const teams=x.teams,scoring=x.scoring;Object.assign(x,defaults(),{teams,scoring});});saveMessage('resetQuiz',ok?'✓ Quiz reset successfully.':'Quiz could not be reset.',!ok);};
 $('clear').onclick=()=>{if(confirm('Reset all teams, scores and timer? Export a backup first.'))change(x=>Object.assign(x,defaults()));};
 
 const labels={direct:'Direct correct',passed:'Passed correct',incorrect:'Incorrect',correct:'Correct',skipped:'Skipped'};
