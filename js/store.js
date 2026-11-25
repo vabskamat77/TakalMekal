@@ -1,4 +1,4 @@
-import {validateBank} from './questions.js?v=4';
+import {validateBank} from './questions.js?v=4.3';
 import {quiz} from './config.js';
 export const defaultScoring=()=>({1:{direct:10,passed:5,incorrect:0},2:{direct:10,passed:5,incorrect:0},4:{correct:10,incorrect:0,skipped:0}});
 export const defaults=()=>({version:1,questions:[],questionOrder:"sequential",activeQuestion:null,usedQuestions:[],completedRounds:[],startedRounds:[],originTeam:0,passCount:0,scoring:defaultScoring(),history:[],teams:[...quiz.teams],scores:Array.from({length:4},()=>[0,0,0,0]),screen:'home',round:1,team:0,mode:'direct',timer:{duration:10,remaining:10000,end:null}});
