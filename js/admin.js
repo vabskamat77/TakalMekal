@@ -32,14 +32,14 @@ function resetAfterRound(x,last){
 }
 $('resetRound').onclick=async()=>{
  saveMessage('resetRound');const last=Math.max(0,...s.completedRounds);
- if(last===4){saveMessage('resetRound','Round 4 is completed. No later rounds to reset.');return;}
+ if(last===4){if(!confirm('All rounds are completed. Clear team selection and return to Home without changing scores?'))return;const ok=await change(x=>resetAfterRound(x,last));saveMessage('resetRound',ok?'✓ Team selection cleared. All completed rounds retained.':'Could not clear team selection.',!ok);return;}
  const scope=last?`Keep Rounds 1–${last} and reset Rounds ${last+1}–4?`:'No rounds completed. Reset progress for all four rounds?';
  if(!confirm(scope+' Scores, used-question status and history for reset rounds will be cleared. Export a backup first.'))return;
  const ok=await change(x=>resetAfterRound(x,last));
  if(ok){$('qFilter').value='';refreshBank();$('qControlMessage').textContent='';}
  saveMessage('resetRound',ok?'✓ Round progress reset successfully.':'Round progress could not be reset.',!ok);
 };
-$('resetQuiz').onclick=async()=>{saveMessage('resetQuiz');if(!confirm('Reset the quiz? All scores, round statuses and score history will be cleared. Team names and scoring rules will be retained. Export a backup first.'))return;const ok=await change(x=>{const teams=x.teams,scoring=x.scoring;Object.assign(x,defaults(),{teams,scoring,questions:x.questions,questionOrder:x.questionOrder});});saveMessage('resetQuiz',ok?'✓ Quiz reset successfully.':'Quiz could not be reset.',!ok);};
+$('resetQuiz').onclick=async()=>{saveMessage('resetQuiz');if(!confirm('Reset the quiz? All scores, round statuses and score history will be cleared. Team names and scoring rules will be retained. Export a backup first.'))return;const ok=await change(x=>{const teams=x.teams,scoring=x.scoring;Object.assign(x,defaults(),{teams,scoring,questions:x.questions,questionOrder:x.questionOrder,team:null,originTeam:null,passCount:0});});if(ok){$('qFilter').value='';refreshBank();$('qControlMessage').textContent='';}saveMessage('resetQuiz',ok?'✓ Quiz reset successfully.':'Quiz could not be reset.',!ok);};
 $('clear').onclick=()=>{if(confirm('Reset all teams, scores and timer? Export a backup first.'))change(x=>Object.assign(x,defaults()));};
 
 const labels={direct:'Direct correct',passed:'Passed correct',incorrect:'Incorrect',correct:'Correct',skipped:'Skipped'};
