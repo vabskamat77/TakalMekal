@@ -16,3 +16,6 @@ $('export').onclick=()=>{const x=structuredClone(s);stop(x);const url=URL.create
 $('import').onchange=async()=>{try{const f=$('import').files[0];if(!f)return;const x=validate(JSON.parse(await f.text()));x.timer.end=null;if(confirm('Replace current local quiz data?'))await change(y=>Object.assign(y,x));}catch(e){status('Import failed: '+e.message);}finally{$('import').value='';}};
 $('clear').onclick=()=>{if(confirm('Reset all teams, scores and timer? Export a backup first.'))change(x=>Object.assign(x,defaults()));};
 try{s=validate(await load());render();$('controls').disabled=false;status('Local database ready · use one admin window only');setInterval(tick,100);}catch(e){status('Database unavailable: '+e.message);}
+
+// Admin navigation is local; switching sections does not change projector state.
+document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(tab=>{const selected=tab===button;tab.setAttribute("aria-pressed",String(selected));$(tab.dataset.tab).hidden=!selected;});}));
