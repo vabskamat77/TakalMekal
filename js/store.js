@@ -1,6 +1,7 @@
+import {validateBank} from './questions.js?v=4';
 import {quiz} from './config.js';
 export const defaultScoring=()=>({1:{direct:10,passed:5,incorrect:0},2:{direct:10,passed:5,incorrect:0},4:{correct:10,incorrect:0,skipped:0}});
-export const defaults=()=>({version:1,completedRounds:[],startedRounds:[],originTeam:0,passCount:0,scoring:defaultScoring(),history:[],teams:[...quiz.teams],scores:Array.from({length:4},()=>[0,0,0,0]),screen:'home',round:1,team:0,mode:'direct',timer:{duration:10,remaining:10000,end:null}});
+export const defaults=()=>({version:1,questions:[],questionOrder:"sequential",activeQuestion:null,usedQuestions:[],completedRounds:[],startedRounds:[],originTeam:0,passCount:0,scoring:defaultScoring(),history:[],teams:[...quiz.teams],scores:Array.from({length:4},()=>[0,0,0,0]),screen:'home',round:1,team:0,mode:'direct',timer:{duration:10,remaining:10000,end:null}});
 const db=new Promise((resolve,reject)=>{const r=indexedDB.open('takal-mekal-local-v2',1);r.onupgradeneeded=()=>r.result.createObjectStore('state');r.onsuccess=()=>resolve(r.result);r.onerror=()=>reject(r.error);});
 export async function load(){const d=await db;return new Promise((resolve,reject)=>{const r=d.transaction('state').objectStore('state').get('quiz');r.onsuccess=()=>resolve(r.result??defaults());r.onerror=()=>reject(r.error);});}
 export async function save(s){const d=await db;return new Promise((resolve,reject)=>{const t=d.transaction('state','readwrite');t.objectStore('state').put(s,'quiz');t.oncomplete=resolve;t.onerror=()=>reject(t.error);t.onabort=()=>reject(t.error);});}
@@ -12,5 +13,5 @@ if(s.completedRounds===undefined)s.completedRounds=[];if(!Array.isArray(s.comple
 if(s.startedRounds===undefined)s.startedRounds=[...new Set([...s.completedRounds,...(s.screen==='round'?[s.round]:[])])];if(!Array.isArray(s.startedRounds)||s.startedRounds.some(r=>![1,2,3,4].includes(r)))throw Error('Invalid started rounds');if(s.originTeam===undefined)s.originTeam=s.team;if(s.passCount===undefined)s.passCount=0;if(![0,1,2,3].includes(s.originTeam)||![0,1,2,3].includes(s.passCount))throw Error('Invalid turn rotation');
 if(s.scoring===undefined)s.scoring=defaultScoring();if(s.history===undefined)s.history=[];
 for(const [r,fields] of Object.entries(defaultScoring()))for(const k of Object.keys(fields)){const n=s.scoring?.[r]?.[k];if(!Number.isSafeInteger(n)||Math.abs(n)>10000)throw Error('Invalid scoring settings');}
-if(!Array.isArray(s.history)||!s.history.every(h=>h&&[0,1,2,3].includes(h.team)&&[1,2,3,4].includes(h.round)&&Number.isSafeInteger(h.delta)&&typeof h.label==='string'))throw Error('Invalid score history');return s;}
+if(!Array.isArray(s.history)||!s.history.every(h=>h&&[0,1,2,3].includes(h.team)&&[1,2,3,4].includes(h.round)&&Number.isSafeInteger(h.delta)&&typeof h.label==='string'))throw Error('Invalid score history');return validateBank(s);}
 export function freshTimer(duration){return {duration,remaining:duration*1000,end:null};}
