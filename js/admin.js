@@ -1,4 +1,4 @@
-import {mountBank} from './questions.js?v=4.3';
+import {mountBank} from './questions.js?v=4.4';
 import {load,save,channel,defaults,validate,freshTimer,remaining,seconds} from './store.js?v=4.3';
 const $=id=>document.getElementById(id);let s,busy=false;
 const status=m=>$('status').textContent=m;
@@ -31,7 +31,6 @@ function renderScoring(){
  $('awardContext').textContent=`${s.teams[s.team]} · Round ${s.round}`;
  $('awardButtons').replaceChildren();
  if(active){const keys=s.round===4?['correct','incorrect','skipped']:[s.mode==='passed'?'passed':'direct','incorrect'];for(const k of keys){const value=s.scoring[s.round][k];const b=node('button',`${labels[k]} (${value>0?'+':''}${value})`);b.dataset.outcome=k;b.onclick=()=>change(x=>{if(x.completedRounds.includes(x.round)||x.screen!=='round')return;record(x,x.team,x.round,x.scoring[x.round][k],labels[k]);if(x.round!==4){if(k==='incorrect')nextPass(x);else nextDirect(x);}});$('awardButtons').append(b);}}
- $('undoScore').disabled=!s.history.length;
  const table=node('table','');for(const [i,values] of [['Team','R1','R2','R3','R4','Total'],...s.teams.map((n,i)=>[n,...s.scores[i],s.scores[i].reduce((a,b)=>a+b,0)])].entries()){const tr=node('tr','');for(const v of values)tr.append(node(i===0?'th':'td',v));table.append(tr);}$('adminScores').replaceChildren(table);
  const form=$('scoringForm');const openPoints=new Set([...form.querySelectorAll('details[open]')].map(d=>d.dataset.round));form.replaceChildren();for(const r of [1,2,3,4]){const card=node('details','');card.className='round-points';card.dataset.round=String(r);card.open=openPoints.has(String(r));card.append(node('summary',`Round ${r}`));if(r===3){card.append(node('p','Scoring rules pending.'));}else{for(const k of Object.keys(defaults().scoring[r])){const l=node('label',labels[k]);const input=node('input','');input.type='number';input.min=-10000;input.max=10000;input.step=1;input.required=true;input.value=s.scoring[r][k];input.dataset.round=r;input.dataset.key=k;l.append(input);card.append(l);}}form.append(card);}
  renderQuizControls();
@@ -45,7 +44,6 @@ function renderQuizControls(){
  for(const r of [1,2,3,4]){const row=node('div','');row.className='quiz-row';row.append(node('strong',`Round ${r}`));const done=s.completedRounds.includes(r);const toggle=node('button',done?'✓ Completed':'Not Complete');toggle.type='button';toggle.setAttribute('aria-pressed',String(done));toggle.onclick=()=>{if(!confirm(`${done?'Reopen':'Complete'} Round ${r}?`))return;change(x=>{if(done){x.completedRounds=x.completedRounds.filter(n=>n!==r);}else{if(!x.completedRounds.includes(r))x.completedRounds.push(r);if(!x.startedRounds.includes(r))x.startedRounds.push(r);if(x.screen==='round'&&x.round===r){stop(x);x.screen='home';}}});};row.append(toggle);
  const details=node('details','');details.dataset.round=r;details.open=opened.includes(String(r));details.append(node('summary','Edit Scores'));const inputs=[];s.teams.forEach((name,i)=>{const label=node('label',name);const input=node('input','');input.type='number';input.step='1';input.required=true;input.value=s.scores[i][r-1];inputs.push(input);label.append(input);details.append(label);});const saveButton=node('button','Save Scores');saveButton.type='button';saveButton.className='save-round';saveButton.onclick=()=>{const values=inputs.map(i=>i.valueAsNumber);if(values.some(v=>!Number.isSafeInteger(v))){status('Enter whole-number scores for all four teams.');return;}if(!confirm(`Save all team scores for Round ${r}?`))return;change(x=>{values.forEach((v,i)=>{const delta=v-x.scores[i][r-1];if(!Number.isSafeInteger(delta))throw Error('Score change too large');if(delta)record(x,i,r,delta,'Manual correction');});});};details.append(saveButton);row.append(details);root.append(row);}
 }
-$('undoScore').onclick=()=>{if(s.history.length&&confirm('Undo the most recent score change?'))change(x=>{const h=x.history.pop();x.scores[h.team][h.round-1]-=h.delta;});};
 
 const refreshBank=mountBank(()=>s,change);
 try{s=validate(await load());render();$('controls').disabled=false;status('Local database ready · use one admin window only');setInterval(tick,100);}catch(e){status('Database unavailable: '+e.message);}
