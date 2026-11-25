@@ -1,4 +1,4 @@
-import {mountBank} from './questions.js?v=4.4';
+import {mountBank} from './questions.js?v=4.6';
 import {load,save,channel,defaults,validate,freshTimer,remaining,seconds} from './store.js?v=4.3';
 const $=id=>document.getElementById(id);let s,busy=false;
 const status=m=>$('status').textContent=m;
@@ -7,18 +7,18 @@ function tick(){if(!s)return;const n=seconds(s.timer);$('clock').textContent=`${
 async function change(fn){if(busy)return false;busy=true;$('controls').disabled=true;try{const next=structuredClone(s);fn(next);validate(next);await save(next);s=next;channel.postMessage('updated');render();status('Saved locally · projector synchronized');return true;}catch(e){status('Save failed: '+e.message);return false;}finally{busy=false;$('controls').disabled=false;tick();}}
 const messageTimers={};
 function saveMessage(id,message='',error=false){const el=$(id+'Message');clearTimeout(messageTimers[id]);el.textContent=message;el.classList.toggle('error',error);if(message&&!error)messageTimers[id]=setTimeout(()=>{el.textContent='';},5000);}
-function nextDirect(x){x.team=((x.originTeam??x.team)+1)%4;x.originTeam=x.team;x.passCount=0;x.mode='direct';x.timer=freshTimer(10);}
+function nextDirect(x){x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;x.team=((x.originTeam??x.team)+1)%4;x.originTeam=x.team;x.passCount=0;x.mode='direct';x.timer=freshTimer(10);}
 function nextPass(x){x.originTeam??=x.team;x.passCount??=0;if(x.passCount>=3){nextDirect(x);return;}x.passCount++;x.team=(x.team+1)%4;x.mode='passed';x.timer=freshTimer(5);x.timer.end=Date.now()+5000;}
 function stop(x){x.timer.remaining=remaining(x.timer);x.timer.end=null;}
 $('projector').onclick=()=>{const w=window.open('index.html?projector=1','takal-projector');if(!w)status('Allow pop-ups or open index.html?projector=1 manually.');};
 $('teams').onsubmit=e=>e.preventDefault();$('saveTeams').onclick=async()=>{saveMessage('saveTeams');const names=[...$('teams').querySelectorAll('input')].map(i=>i.value.trim());if(names.some(n=>!n)||new Set(names.map(n=>n.toLowerCase())).size!==4){status('Enter four distinct team names.');saveMessage('saveTeams','Enter four distinct team names.',true);return;}const ok=await change(x=>x.teams=names);saveMessage('saveTeams',ok?'✓ Team names saved successfully.':'Team names could not be saved.',!ok);};
-document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>change(x=>{stop(x);x.screen=b.dataset.screen;}));
-document.querySelectorAll('[data-round]').forEach(b=>b.onclick=()=>change(x=>{if(x.completedRounds.includes(Number(b.dataset.round)))return;x.round=Number(b.dataset.round);x.activeQuestion=null;x.questionHidden=false;x.answerVisible=false;if(!x.startedRounds.includes(x.round))x.startedRounds.push(x.round);x.originTeam=x.team;x.passCount=0;x.screen='round';x.mode=x.round===4?'rapid':'direct';x.timer=freshTimer(x.round===4?60:10);}));
+document.querySelectorAll('[data-screen]').forEach(b=>b.onclick=()=>change(x=>{stop(x);x.screen=b.dataset.screen;x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;}));
+document.querySelectorAll('[data-round]').forEach(b=>b.onclick=()=>change(x=>{if(x.completedRounds.includes(Number(b.dataset.round)))return;x.round=Number(b.dataset.round);x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;if(!x.startedRounds.includes(x.round))x.startedRounds.push(x.round);x.originTeam=x.team;x.passCount=0;x.screen='round';x.mode=x.round===4?'rapid':'direct';x.timer=freshTimer(x.round===4?60:10);}));
 document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>change(x=>{const m=b.dataset.mode;if(x.round===3||(x.round===4?m!=='rapid':m==='rapid'))return;x.mode=m;x.timer=freshTimer({direct:10,passed:5,rapid:60}[m]);}));
 $('pass').onclick=()=>change(x=>{if(x.screen!=='round'||![1,2].includes(x.round))return;nextPass(x);});
 $('start').onclick=()=>change(x=>{if(x.round===3||x.screen!=='round')return;if(x.timer.end!==null){stop(x);}else if(x.timer.remaining>0){x.timer.end=Date.now()+x.timer.remaining;}});
 $('export').onclick=()=>{const x=structuredClone(s);stop(x);const url=URL.createObjectURL(new Blob([JSON.stringify(x,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='takal-mekal-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
-$('import').onchange=async()=>{try{const f=$('import').files[0];if(!f)return;const x=validate(JSON.parse(await f.text()));x.timer.end=null;if(confirm('Replace current local quiz data?'))await change(y=>Object.assign(y,x));}catch(e){status('Import failed: '+e.message);}finally{$('import').value='';}};
+$('import').onchange=async()=>{try{const f=$('import').files[0];if(!f)return;const x=validate(JSON.parse(await f.text()));x.timer.end=null;x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;if(confirm('Replace current local quiz data?'))await change(y=>Object.assign(y,x));}catch(e){status('Import failed: '+e.message);}finally{$('import').value='';}};
 $('resetQuiz').onclick=async()=>{saveMessage('resetQuiz');if(!confirm('Reset the quiz? All scores, round statuses and score history will be cleared. Team names and scoring rules will be retained. Export a backup first.'))return;const ok=await change(x=>{const teams=x.teams,scoring=x.scoring;Object.assign(x,defaults(),{teams,scoring,questions:x.questions,questionOrder:x.questionOrder});});saveMessage('resetQuiz',ok?'✓ Quiz reset successfully.':'Quiz could not be reset.',!ok);};
 $('clear').onclick=()=>{if(confirm('Reset all teams, scores and timer? Export a backup first.'))change(x=>Object.assign(x,defaults()));};
 
@@ -30,7 +30,7 @@ function renderScoring(){
  $('awardPanel').hidden=!active;$('roundComplete').hidden=!active||s.round!==1;$('roundComplete').disabled=s.completedRounds.includes(1);
  $('awardContext').textContent=`${s.teams[s.team]} · Round ${s.round}`;
  $('awardButtons').replaceChildren();
- if(active){const keys=s.round===4?['correct','incorrect','skipped']:[s.mode==='passed'?'passed':'direct','incorrect'];for(const k of keys){const value=s.scoring[s.round][k];const b=node('button',`${labels[k]} (${value>0?'+':''}${value})`);b.dataset.outcome=k;b.onclick=()=>change(x=>{if(x.completedRounds.includes(x.round)||x.screen!=='round')return;record(x,x.team,x.round,x.scoring[x.round][k],labels[k]);if(x.round!==4){if(k==='incorrect')nextPass(x);else nextDirect(x);}});$('awardButtons').append(b);}}
+ if(active){const keys=s.round===4?['correct','incorrect','skipped']:[s.mode==='passed'?'passed':'direct','incorrect'];for(const k of keys){const value=s.scoring[s.round][k];const b=node('button',`${labels[k]} (${value>0?'+':''}${value})`);b.dataset.outcome=k;b.onclick=()=>change(x=>{if(x.completedRounds.includes(x.round)||x.screen!=='round')return;record(x,x.team,x.round,x.scoring[x.round][k],labels[k]);if(x.round!==4){if(k==='incorrect')nextPass(x);else nextDirect(x);}else{x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;}});$('awardButtons').append(b);}}
  const table=node('table','');for(const [i,values] of [['Team','R1','R2','R3','R4','Total'],...s.teams.map((n,i)=>[n,...s.scores[i],s.scores[i].reduce((a,b)=>a+b,0)])].entries()){const tr=node('tr','');for(const v of values)tr.append(node(i===0?'th':'td',v));table.append(tr);}$('adminScores').replaceChildren(table);
  const form=$('scoringForm');const openPoints=new Set([...form.querySelectorAll('details[open]')].map(d=>d.dataset.round));form.replaceChildren();for(const r of [1,2,3,4]){const card=node('details','');card.className='round-points';card.dataset.round=String(r);card.open=openPoints.has(String(r));card.append(node('summary',`Round ${r}`));if(r===3){card.append(node('p','Scoring rules pending.'));}else{for(const k of Object.keys(defaults().scoring[r])){const l=node('label',labels[k]);const input=node('input','');input.type='number';input.min=-10000;input.max=10000;input.step=1;input.required=true;input.value=s.scoring[r][k];input.dataset.round=r;input.dataset.key=k;l.append(input);card.append(l);}}form.append(card);}
  renderQuizControls();
@@ -46,7 +46,7 @@ function renderQuizControls(){
 }
 
 const refreshBank=mountBank(()=>s,change);
-try{s=validate(await load());render();$('controls').disabled=false;status('Local database ready · use one admin window only');setInterval(tick,100);}catch(e){status('Database unavailable: '+e.message);}
+try{s=validate(await load());s.activeQuestion=null;s.questionHidden=true;s.answerVisible=false;await save(s);channel.postMessage('updated');render();$('controls').disabled=false;status('Local database ready · use one admin window only');setInterval(tick,100);}catch(e){status('Database unavailable: '+e.message);}
 
 // Admin navigation is local; switching sections does not change projector state.
 document.querySelectorAll("[data-tab]").forEach(button=>button.addEventListener("click",()=>{document.querySelectorAll("[data-tab]").forEach(tab=>{const selected=tab===button;tab.setAttribute("aria-pressed",String(selected));$(tab.dataset.tab).hidden=!selected;});}));
