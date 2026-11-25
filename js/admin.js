@@ -1,4 +1,4 @@
-import {mountBank} from './questions.js?v=4.18';
+import {mountBank} from './questions.js?v=4.20';
 import {load,save,channel,defaults,validate,freshTimer,remaining,seconds} from './store.js?v=4.3';
 const $=id=>document.getElementById(id);let s,busy=false;
 const status=m=>$('status').textContent=m;
@@ -19,6 +19,26 @@ $('pass').onclick=()=>change(x=>{if(x.screen!=='round'||![1,2].includes(x.round)
 $('start').onclick=()=>change(x=>{if(x.round===3||x.screen!=='round')return;if(x.timer.end!==null){stop(x);}else if(x.timer.remaining>0){x.timer.end=Date.now()+x.timer.remaining;}});
 $('export').onclick=()=>{const x=structuredClone(s);stop(x);const url=URL.createObjectURL(new Blob([JSON.stringify(x,null,2)],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='takal-mekal-backup.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
 $('import').onchange=async()=>{try{const f=$('import').files[0];if(!f)return;const x=validate(JSON.parse(await f.text()));x.timer.end=null;x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;if(confirm('Replace current local quiz data?'))await change(y=>Object.assign(y,x));}catch(e){status('Import failed: '+e.message);}finally{$('import').value='';}};
+function resetAfterRound(x,last){
+ const keep=new Set(x.questions.filter(q=>q.round<=last).map(q=>q.id));
+ x.scores=x.scores.map(row=>row.map((points,i)=>i<last?points:0));
+ x.history=x.history.filter(entry=>entry.round<=last);
+ x.usedQuestions=x.usedQuestions.filter(id=>keep.has(id));
+ x.startedRounds=x.startedRounds.filter(r=>r<=last);
+ x.completedRounds=x.completedRounds.filter(r=>r<=last);
+ x.screen='home';x.round=Math.min(last+1,4);x.team=0;x.originTeam=0;x.passCount=0;
+ x.mode=x.round===4?'rapid':'direct';x.timer=freshTimer(x.round===4?60:10);
+ x.activeQuestion=null;x.questionHidden=true;x.answerVisible=false;x.answerUnlocked=false;
+}
+$('resetRound').onclick=async()=>{
+ saveMessage('resetRound');const last=Math.max(0,...s.completedRounds);
+ if(last===4){saveMessage('resetRound','Round 4 is completed. No later rounds to reset.');return;}
+ const scope=last?`Keep Rounds 1–${last} and reset Rounds ${last+1}–4?`:'No rounds completed. Reset progress for all four rounds?';
+ if(!confirm(scope+' Scores, used-question status and history for reset rounds will be cleared. Export a backup first.'))return;
+ const ok=await change(x=>resetAfterRound(x,last));
+ if(ok){$('qFilter').value='';refreshBank();$('qControlMessage').textContent='';}
+ saveMessage('resetRound',ok?'✓ Round progress reset successfully.':'Round progress could not be reset.',!ok);
+};
 $('resetQuiz').onclick=async()=>{saveMessage('resetQuiz');if(!confirm('Reset the quiz? All scores, round statuses and score history will be cleared. Team names and scoring rules will be retained. Export a backup first.'))return;const ok=await change(x=>{const teams=x.teams,scoring=x.scoring;Object.assign(x,defaults(),{teams,scoring,questions:x.questions,questionOrder:x.questionOrder});});saveMessage('resetQuiz',ok?'✓ Quiz reset successfully.':'Quiz could not be reset.',!ok);};
 $('clear').onclick=()=>{if(confirm('Reset all teams, scores and timer? Export a backup first.'))change(x=>Object.assign(x,defaults()));};
 
